@@ -1,5 +1,4 @@
 #- ResourceManager (Executable)
-# get_filename_component(TARGET_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 
 file(GLOB_RECURSE TARGET_SOURCE_FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
@@ -14,8 +13,7 @@ file(GLOB_RECURSE TARGET_HEADER_FILES
 
 set(TARGET_FILES ${TARGET_SOURCE_FILES} ${TARGET_HEADER_FILES})
 set(TARGET_HEADER_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Header)
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${TARGET_FILES})
+set(${TARGET_NAME}_HEADER_DIRECTORY ${TARGET_HEADER_DIRECTORY} PARENT_SCOPE)
 
 add_executable(${TARGET_NAME})
 
@@ -25,8 +23,8 @@ target_include_directories(${TARGET_NAME} PRIVATE ${ADITIONAL_INCLUDE_DIRECTORIE
 target_link_libraries(${TARGET_NAME} PRIVATE ${ADITIONAL_LINK_LIBRARIES})
 
 
-if (MSVC)
-	target_compile_options(${TARGET_NAME} PRIVATE /W4 /WX)
-else ()
-	message("not using MSVC")
-endif()
+# if (MSVC)
+	# target_compile_options(${TARGET_NAME} PRIVATE /W4 /WX)
+# else ()
+	# message("not using MSVC")
+# endif()

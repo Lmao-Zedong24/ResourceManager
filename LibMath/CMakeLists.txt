@@ -17,8 +17,12 @@ set(${TARGET_NAME}_HEADER_DIRECTORY ${TARGET_HEADER_DIRECTORY} PARENT_SCOPE)
 
 add_library(${TARGET_NAME} STATIC)
 
-set_target_properties(${TARGET_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-
 target_sources(${TARGET_NAME} PRIVATE ${TARGET_FILES})
 target_include_directories(${TARGET_NAME} PRIVATE ${TARGET_HEADER_DIRECTORY})
 target_link_libraries(${TARGET_NAME} PRIVATE Ws2_32.lib)
+
+if (MSVC)
+	target_compile_options(${TARGET_NAME} PRIVATE /W4 /WX)
+else ()
+	message("not using MSVC")
+endif()

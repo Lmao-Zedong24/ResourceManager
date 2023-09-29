@@ -1,4 +1,4 @@
-#- OpenGl (Executable)
+#- OpenGl (Lib)
 
 file(GLOB_RECURSE TARGET_SOURCE_FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
@@ -17,9 +17,13 @@ set(${TARGET_NAME}_HEADER_DIRECTORY ${TARGET_HEADER_DIRECTORY} PARENT_SCOPE)
 
 add_library(${TARGET_NAME} STATIC)
 
-set_target_properties(${TARGET_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-
 target_sources(${TARGET_NAME} PRIVATE ${TARGET_FILES})
-target_include_directories(${TARGET_NAME} PRIVATE ${TARGET_HEADER_DIRECTORY})
-target_link_libraries(${TARGET_NAME} PRIVATE Ws2_32.lib)
+target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Header)
+target_include_directories(${TARGET_NAME} PRIVATE ${ADITIONAL_INCLUDE_DIRECTORIES})
+target_link_libraries(${TARGET_NAME} PRIVATE ${ADITIONAL_LINK_LIBRARIES})
 
+# if (MSVC)
+	# target_compile_options(${TARGET_NAME} PRIVATE /W4 /WX)
+# else ()
+	# message("not using MSVC")
+# endif()
