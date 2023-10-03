@@ -15,23 +15,26 @@ class Model : public IResource, public Transform
 	struct Vertex;
 
 public:
-	Model() = default;
-	Model(const std::string& p_fileName);
-	~Model() = default;
+	Model();
+	~Model();
 
-	bool SetModel(const std::string& p_fileName);
+	void Initialize(const std::string& fileName)override;
+	void ThreadUnsafeSetup()override;
 	void SetVAO();
+
 	void Draw(Texture& textures, Shader& shader, Camera& p_camera);
 
 	void Delete()override;
 
 private:
+	bool SetModel(const std::string& p_fileName);
+
 	std::vector<Vertex> m_vertices;
 	std::vector<GLuint> m_indices;
 	VAO m_vao;
 	//LibMath::Matrix4 m_projViewModelMat;
 
-	const std::string ModelPath = "assets/meshes/";
+	const std::string ModelPath = "../assets/meshes/";
 
 	void InterpretFace(	std::istringstream& p_line,
 						const std::vector<LibMath::Vector3>& allPos,

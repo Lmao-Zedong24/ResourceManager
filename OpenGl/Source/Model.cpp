@@ -7,9 +7,23 @@
 #include "VBO.h"
 #include "EBO.h"
 
-Model::Model(const std::string& p_fileName) : Transform(LibMath::Matrix4(1))
+Model::Model() : Transform(LibMath::Matrix4(1))
 {
-    SetModel(p_fileName);
+}
+
+Model::~Model()
+{
+	m_vao.Delete();
+}
+
+void Model::Initialize(const std::string& fileName)
+{
+	SetModel(fileName);
+}
+
+void Model::ThreadUnsafeSetup()
+{
+	SetVAO();
 }
 
 void Model::InterpretFace(	std::istringstream& p_line,	

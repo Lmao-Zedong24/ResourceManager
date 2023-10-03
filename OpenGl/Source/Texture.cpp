@@ -2,10 +2,23 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-
-Texture::Texture(const std::string& p_fileName)
+Texture::Texture() : m_id()
 {
-    SetTexture(p_fileName);
+}
+
+Texture::~Texture()
+{
+    this->Delete();
+}
+
+void Texture::Initialize(const std::string& p_fileName)
+{
+    m_fileName = p_fileName;
+}
+
+void Texture::ThreadUnsafeSetup()
+{
+    SetTexture(m_fileName);
 }
 
 bool Texture::SetTexture(const std::string& p_fileName)
@@ -21,6 +34,7 @@ bool Texture::SetTexture(const std::string& p_fileName)
 
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true);
+
     unsigned char* data = stbi_load((TexturePath + p_fileName).c_str(), &width, &height, &nrChannels, 0);
 
     if (data)
@@ -32,6 +46,8 @@ bool Texture::SetTexture(const std::string& p_fileName)
     }
 
     std::cout << "Failed to load texture" << std::endl;
+    if (stbi_failure_reason())
+        std::cout << stbi_failure_reason();
     stbi_image_free(data);
     return false;
 }

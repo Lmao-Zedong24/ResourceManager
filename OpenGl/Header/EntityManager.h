@@ -3,7 +3,8 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
-
+#include "PlayerGO.h"
+#include "CameraG0.h"
 
 class EntityManager
 {
@@ -48,9 +49,6 @@ public:
 	};
 
 	void DrawAllEntities(Shader& p_shader, Camera& p_camera);
-
-	//void Delete(const std::string& p_fileName);
-	//void DeleteAll();
 
 private:
 	std::unordered_map<std::string, std::unique_ptr<GameObject>> m_entities;

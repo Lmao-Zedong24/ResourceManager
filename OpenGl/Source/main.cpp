@@ -53,7 +53,7 @@ int main()
 
 	Camera cam;
 	Light lig(LibMath::Vector3(0, 0, 0));
-	ResourceManager rm;
+	OpenGl::ResourceManager rm;
 	rm.Add<Texture>("png-clipart-barack-obama-barack-obama.png");
 	rm.Add<Texture>("red.png");
 	rm.Add<Texture>("green.png");
@@ -67,12 +67,12 @@ int main()
 	rm.Add<Model>("sphere.obj")->SetVAO();
 	rm.Add<Model>("cylindre.obj")->SetVAO();
 
-	auto& shader =		*rm.Get<Shader>("shaderBuffer.txt");
-	auto green =		rm.Get<Texture>("png-clipart-barack-obama-barack-obama.png");
-	auto red =			rm.Get<Texture>("red.png");
-	auto grey =			rm.Get<Texture>("grey.png");
-	auto model1 =		rm.Get<Model>("Sting-Sword-lowpoly.obj");
-	auto modelCube =	rm.Get<Model>("cube.obj");
+	auto& shader =		*rm.getResource<Shader>("shaderBuffer.txt");
+	auto green =		rm.getResource<Texture>("png-clipart-barack-obama-barack-obama.png");
+	auto red =			rm.getResource<Texture>("red.png");
+	auto grey =			rm.getResource<Texture>("grey.png");
+	auto model1 =		rm.getResource<Model>("Sting-Sword-lowpoly.obj");
+	auto modelCube =	rm.getResource<Model>("cube.obj");
 
 	cam.SetUniformCam(shader);
 	lig.SetUniformLight(shader);
@@ -92,11 +92,11 @@ int main()
 	//auto textures = std::vector<Texture*>{ green };
 
 	//cube->AddChildreen<GameObject>(names, models, textures);
-	cube->AddCapsuleChild(3, 0.5f,	rm.Get<Model>("sphere.obj"),
-									rm.Get<Model>("cylindre.obj"),
+	cube->AddCapsuleChild(3, 0.5f,	rm.getResource<Model>("sphere.obj"),
+									rm.getResource<Model>("cylindre.obj"),
 									red);
-	swrd->AddCapsuleChild(1, 1,		rm.Get<Model>("sphere.obj"),
-									rm.Get<Model>("cylindre.obj"),
+	swrd->AddCapsuleChild(1, 1,		rm.getResource<Model>("sphere.obj"),
+									rm.getResource<Model>("cylindre.obj"),
 									red);
 
 	auto& cbe =		*em.Get<GameObject>("cube");

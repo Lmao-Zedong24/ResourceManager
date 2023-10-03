@@ -22,6 +22,9 @@ target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/He
 target_include_directories(${TARGET_NAME} PRIVATE ${ADITIONAL_INCLUDE_DIRECTORIES})
 target_link_libraries(${TARGET_NAME} PRIVATE ${ADITIONAL_LINK_LIBRARIES})
 
+file(COPY Shaders DESTINATION ${CMAKE_BINARY_DIR})
+
+
 # if (MSVC)
 	# target_compile_options(${TARGET_NAME} PRIVATE /W4 /WX)
 # else ()

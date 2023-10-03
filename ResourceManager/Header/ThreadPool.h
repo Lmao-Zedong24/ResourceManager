@@ -1,32 +1,47 @@
+#pragma once
 #include <vector>
 #include <thread>
 #include <functional>
+#include <queue>
+#include <mutex>
+#include <set>
 
 namespace Multi
 {
-    class ThreadPool
+    constexpr int NUM_UNPOLLABLE_THREADS = 2;
+
+    class ThreadPoll
     {
     public:
-        static ThreadPool* GetInstance();
+        static ThreadPoll* getInstance();
 
-        void SetPoolSize(int i);
+        void            startWorkers(int i);
+        void            setMaxPollSize();
+        void            addFuncToThread(const std::function<void()>& func, int id);
+        void            stop();
 
-        void SetDeactivateCallback(const std::function<void()>& callBack);
+        int             getPoolId();
+        void            waitUntilTasksAreDone(int id);
 
-        std::thread* GetThread();
-
-        void DeactivateThread(const std::thread* thread);
-
+        ThreadPoll();
+        ~ThreadPoll() = default;
     private:
-        ThreadPool() : m_pool()
-        {}
-        ~ThreadPool() = default;
 
-        static std::unique_ptr<ThreadPool> m_instance;
+        void workerThread();
 
-        std::vector<std::thread> m_pool;
-        std::vector<bool> m_threadInUseBuffer;
-        std::function<void()> m_callBack;
+        static std::unique_ptr<ThreadPoll>  m_instance;
+
+        int                                 m_maxPoolSize;
+        bool                                m_isStop;
+        int                                 m_numRunningWorkers;
+        std::mutex                          m_task;
+        std::mutex                          m_id;
+        std::condition_variable             m_condition;
+        std::queue<std::function<void()>>   m_funcsToThread;
+        std::vector<int>                    m_idNumTaskBuffer;
+        //std::queue<std::function<void()>>   m_funcsToThread;
+        std::vector<std::jthread>           m_workers;
+
     };
 
 }

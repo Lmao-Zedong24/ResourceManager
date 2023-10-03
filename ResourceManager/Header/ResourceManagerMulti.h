@@ -1,39 +1,39 @@
 #pragma once
 #include "IResource.h"
+#include "IResourceManager.h"
 #include <unordered_map>
 #include <string>
 #include <memory>
 #include <thread>
 #include <mutex>
+#include <queue>
 
 namespace Multi
 {
-	class ResourceManager
+	class ResourceManager : public IResourceManager
 	{
 	public:
-		ResourceManager() = default;
+		ResourceManager();
 		ResourceManager(const ResourceManager&) = default;
 		ResourceManager(ResourceManager&&) = default;
 		~ResourceManager() = default;
 
-		enum ProductId
-		{
-			Model,
-			Texture
-		};
+		template <typename T>
+		void addRessource(const std::string& p_fileName);
 
-		//TODO: add resources then generate them? or mutex magic
-		const IResource* CreateResource(const std::string& fileName, ProductId id);
-		const IResource* GetResource(const std::string& fileName);
+		void loadBasicResources()override;
+		void loadBasicScene(EntityManager* em, PlayerGO** player, CameraG0** camGO)override;
+
+		template <typename T>
+		T* getResource(const std::string& fileName);
 
 		void Delete(const std::string& p_fileName);
-		void DeleteAll();
+		void DeleteAll()override;
 
 	private:
-		void CreateResourceThread(const std::string& fileName, ProductId id);
-
 		std::unordered_map<std::string, std::unique_ptr<IResource>> m_resources;
 		std::vector<std::thread> m_threads;
+		int m_poolId;
 	};
 
 }

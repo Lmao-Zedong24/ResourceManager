@@ -1,51 +1,122 @@
 #include "ThreadPool.h"
+#include <stdlib.h>  
 
 namespace Multi
 {
-    ThreadPool* ThreadPool::GetInstance()
+    std::unique_ptr<ThreadPoll> ThreadPoll::m_instance = nullptr;
+
+    ThreadPoll::ThreadPoll() : 
+        m_workers(), m_funcsToThread(), m_isStop(false),
+        m_numRunningWorkers()
+    {
+        m_maxPoolSize = std::thread::hardware_concurrency() - NUM_UNPOLLABLE_THREADS;
+    }
+
+    ThreadPoll* ThreadPoll::getInstance()
     {
         if (m_instance == nullptr)
-            m_instance = std::make_unique<ThreadPool>();
+            m_instance = std::make_unique<ThreadPoll>();
 
         return m_instance.get();
     }
 
-    void ThreadPool::SetPoolSize(int i)
+    void ThreadPoll::startWorkers(int i)
     {
-        //m_pool.clear();
-        m_pool.resize(i);
-        m_threadInUseBuffer.resize(i, false);
-    }
+        stop();
 
-    void ThreadPool::SetDeactivateCallback(const std::function<void()>& callBack)
-    {
-        m_callBack = callBack;
-    }
-
-    std::thread* ThreadPool::GetThread()
-    {
-        for (int i = 0; i < m_threadInUseBuffer.size(); i++)
         {
-            if (!m_threadInUseBuffer[i])
-            {
-                m_threadInUseBuffer[i] = true;
-                return &m_pool[i];
-            }
+            std::unique_lock lk(m_task);
+            m_workers.resize(std::clamp(i, 0, m_maxPoolSize));
+
+            for (int i = 0; i < m_workers.size(); i++)
+                m_workers[i] = std::jthread(&ThreadPoll::workerThread, this);
+
+            m_isStop = false;
         }
 
-        return nullptr;
     }
 
-    void ThreadPool::DeactivateThread(const std::thread* thread)
+    void ThreadPoll::setMaxPollSize()
     {
-        for (int i = 0; i < m_pool.size(); i++)
-        {
-            if (&m_pool[i] == thread)
-            {
-                m_threadInUseBuffer[i] = false;
+        startWorkers(m_maxPoolSize);
+    }
 
-                if (m_callBack != nullptr)
-                    m_callBack();
+    void ThreadPoll::addFuncToThread(const std::function<void()>& func, int id = -1)
+    {
+        if (m_workers.empty())
+            m_workers.push_back(std::jthread(&ThreadPoll::workerThread, this));
+
+        {
+            std::unique_lock lk(m_task);
+
+            if (id >= 0 && id < m_idNumTaskBuffer.size())
+            {
+                std::function<void()> newFunc([this, func, id] { func();  m_idNumTaskBuffer[id]--; });
+                m_funcsToThread.emplace(newFunc);
+                m_idNumTaskBuffer[id]++;
+            }
+            else
+                m_funcsToThread.emplace(func);
+
+            m_condition.notify_one();
+        }
+    }
+
+    void ThreadPoll::stop()
+    {
+        {
+            std::unique_lock lk(m_task);
+            m_isStop = true;
+            m_condition.notify_all();
+        }
+
+        bool areRunningThreads = true;
+        while (areRunningThreads)       //wait till they all close
+        {
+            std::unique_lock lk(m_task);
+            areRunningThreads = m_numRunningWorkers != 0;
+        }
+    }
+
+    int ThreadPoll::getPoolId()
+    {
+        m_idNumTaskBuffer.push_back(0);
+        return m_idNumTaskBuffer.size() - 1;
+    }
+
+    void ThreadPoll::waitUntilTasksAreDone(int id)
+    {
+        bool areRunningTasks = true;
+        while (areRunningTasks)       //wait till they all done
+        {
+            std::unique_lock lk(m_id);
+            areRunningTasks = m_idNumTaskBuffer[id] != 0;
+        }
+    }
+
+    void ThreadPoll::workerThread()
+    {
+        while (true)
+        {   
+            std::function<void()> func;
+
+            {
+                std::unique_lock lk(m_task);
+                m_condition.wait(lk, [this] { return !m_funcsToThread.empty() || m_isStop; });
+
+                if (m_isStop)
+                    return;
+
+                m_numRunningWorkers++;
+                func = m_funcsToThread.front();
+                m_funcsToThread.pop();
+            }
+            func();
+
+
+            {
+                std::unique_lock lk(m_task);
+                m_numRunningWorkers--;
             }
         }
     }

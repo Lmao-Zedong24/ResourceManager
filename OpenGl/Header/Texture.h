@@ -7,15 +7,19 @@
 class Texture : public IResource
 {
 public:
-	Texture(const std::string& p_fileName);
+	Texture();
+	~Texture();
 
-	bool SetTexture(const std::string& p_fileName);
+	void Initialize(const std::string& p_fileName) override;
+	void ThreadUnsafeSetup() override;
+
 	void Bind();
 	void Unbind();
 	void Delete()override;
 
 	GLuint m_id;
 private:
-	const std::string TexturePath = "assets/textures/";
+	bool SetTexture(const std::string& p_fileName);
+	const std::string TexturePath = "../assets/textures/";
 };
 

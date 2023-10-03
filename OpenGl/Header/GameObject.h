@@ -34,7 +34,6 @@ public:
 
 		if (m_children.count(p_name) != 0)
 			return static_cast<T*>(m_children.at(p_name).get());
-		//return m_children.at(p_name).get();
 
 		return nullptr;
 	};
@@ -64,9 +63,6 @@ public:
 
 		this->m_children.insert({ p_name, std::make_unique<T>(this, p_model, p_texture) });
 		T* childPtr = static_cast<T*>(this->m_children.at(p_name).get());
-		//childPtr->m_parent = this;
-
-		//childPtr->SetupEntity(p_model, p_texture);
 
 		return childPtr;
 	};

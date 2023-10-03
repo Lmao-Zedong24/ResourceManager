@@ -10,7 +10,11 @@ class IResource
 {
 public:
 	virtual void Delete() {}
+	virtual void Initialize(const std::string& fileName) {};
+	virtual void ThreadUnsafeSetup() {};
+
 protected:
 	std::string ReadFile(const std::string& p_fileName, const std::string& p_resourcePath = "");
+	std::string m_fileName;
 };
 
