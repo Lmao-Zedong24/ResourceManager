@@ -68,10 +68,37 @@ int main()
 		}
 		else if (c == 'q')
 		{
+			rm.destroy();
+			glfwTerminate();
+			return 0;
+		}
+		else if (c == 'g')
+		{
+			rm.loadScene(&em, &player, &camGO);
 			break;
 		}
 		else
 			std::cout << "Enter valid input" << std::endl;
+	}
+
+	Shader shader;
+	shader.Initialize("shaderBuffer.txt");
+	shader.Link();
+
+	while (!glfwWindowShouldClose(window))
+	{
+		camGO->Update();
+
+		processInput(window);
+		player->Inputs(window);
+		player->Update();
+
+		render();
+
+		em.DrawAllEntities(shader, camGO->GetCamera());
+
+		glfwSwapBuffers(window);
+		glfwPollEvents();
 	}
 
 	rm.destroy();

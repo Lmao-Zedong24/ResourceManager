@@ -7,8 +7,9 @@ class Shader : public IResource
 {
 public:
 	Shader() = default;
-	Shader(const std::string& p_fileBuffer);
 	~Shader() = default;
+
+	void Initialize(const std::string& p_fileBuffer)override;
 
 	bool SetVertexShader(const std::string& p_filename);
 	bool SetFragmentShader(const std::string& p_filename);

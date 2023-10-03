@@ -43,7 +43,6 @@ namespace Multi
 		rm.addRessource<Model>("sphere.obj");
 		rm.addRessource<Model>("cylindre.obj");
 
-
 		for (int i = 2; i <= 10; i++) //Sting-Sword-lowpoly - Copy (2).obj
 			rm.addRessource<Model>(std::string("Sting-Sword-lowpoly - Copy (") + std::to_string(i) + std::string(").obj"));
 

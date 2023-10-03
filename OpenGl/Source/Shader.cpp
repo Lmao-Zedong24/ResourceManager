@@ -3,11 +3,11 @@
 #include <string>
 #include <fstream>
 
-Shader::Shader(const std::string& p_fileName)
+void Shader::Initialize(const std::string& p_fileBuffer)
 {
 	std::ifstream file;
 	std::string line;
-	file.open(ShaderPath + p_fileName);
+	file.open(ShaderPath + p_fileBuffer);
 
 	if (file.is_open())
 	{
@@ -18,6 +18,7 @@ Shader::Shader(const std::string& p_fileName)
 		SetFragmentShader(line);
 	}
 }
+
 
 bool Shader::SetVertexShader(const std::string& p_filename)
 {
