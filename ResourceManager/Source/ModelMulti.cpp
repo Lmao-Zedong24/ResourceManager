@@ -7,7 +7,7 @@
 
 
 
-namespace Multi 
+namespace Multi
 {
 	void ModelMulti::Initialize(const std::string& fileName)
 	{

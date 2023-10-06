@@ -8,8 +8,8 @@ void RessourceManagerTester::setManager(ManagerTypes type)
 	switch (type)
 	{
 	case RessourceManagerTester::SINGLE:	m_manager = std::make_unique<OpenGl::ResourceManager>();	break;
-	case RessourceManagerTester::MULTI:		m_manager = std::make_unique<Multi::ResourceManager>();
-											Multi::ThreadPoll::getInstance()->setMaxPollSize();			break;
+	case RessourceManagerTester::MULTI:		m_manager = std::make_unique<OpenGl::ResourceManager>();
+											Multi::ThreadPoll::getInstance()->startMaxPollSize();			break;
 	default:
 		break;
 	}
@@ -17,12 +17,7 @@ void RessourceManagerTester::setManager(ManagerTypes type)
 
 void RessourceManagerTester::loadRessources()
 {
-	m_manager->loadBasicResources();
-}
-
-void RessourceManagerTester::loadScene(EntityManager* em, PlayerGO** player, CameraG0** camGO)
-{
-	m_manager->loadBasicScene(em, player, camGO);
+	m_manager->loadResources();
 }
 
 void RessourceManagerTester::destroy()

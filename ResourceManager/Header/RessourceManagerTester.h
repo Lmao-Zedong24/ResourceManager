@@ -19,7 +19,6 @@ public:
 
 	void setManager(ManagerTypes type);
 	void loadRessources();
-	void loadScene(EntityManager* em, PlayerGO** player, CameraG0** camGO);
 	void destroy();
 
 private:

@@ -113,7 +113,7 @@ int main()
 	PlayerGO* player	= em.Add<PlayerGO>("player", nullptr);
 	player->GetLocalTransform().translate(0, 4, 0);
 
-	CameraG0* camGO		= player->GetChild<CameraG0>(PlayerGO::CameraName);
+	CameraGO* camGO		= player->GetChild<CameraGO>(PlayerGO::CameraName);
 
 	Transform& t1 = camGO->AddChild<GameObject>("crosshair1", modelCube, red)->GetLocalTransform();
 	t1.translate(0, 0, -0.5f);

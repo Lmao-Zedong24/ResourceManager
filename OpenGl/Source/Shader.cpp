@@ -17,6 +17,8 @@ void Shader::Initialize(const std::string& p_fileBuffer)
 		std::getline(file, line);
 		SetFragmentShader(line);
 	}
+
+	file.close();
 }
 
 

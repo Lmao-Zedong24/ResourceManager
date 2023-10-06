@@ -18,7 +18,7 @@ namespace Multi
 
         void            startRunningWorkers(int num);
         void            stop();
-        void            setMaxPollSize();
+        void            startMaxPollSize();
         void            addFuncToThread(const std::function<void()>& func);
 
         ThreadPoll();

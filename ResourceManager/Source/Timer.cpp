@@ -1,6 +1,6 @@
 #include "Timer.h"
 
-namespace My
+namespace Multi
 {
     void Timer::Start(int timerLengthMs)
     {

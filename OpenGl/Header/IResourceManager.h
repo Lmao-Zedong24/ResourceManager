@@ -6,7 +6,6 @@
 class IResourceManager
 {
 public:
-	void virtual loadBasicResources() {};
-	void virtual loadBasicScene(EntityManager* em, PlayerGO** player, CameraG0** camGO) {};
+	void virtual loadResources() {};
 	void virtual DeleteAll() {};
 };

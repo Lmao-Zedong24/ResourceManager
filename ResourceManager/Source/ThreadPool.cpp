@@ -34,7 +34,7 @@ namespace Multi
         }
     }
 
-    void ThreadPoll::setMaxPollSize()
+    void ThreadPoll::startMaxPollSize()
     {
         startRunningWorkers(m_maxPoolSize);
     }

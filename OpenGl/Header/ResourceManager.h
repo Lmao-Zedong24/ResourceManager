@@ -1,6 +1,6 @@
 #pragma once
 #include <unordered_map>
-#include"IResource.h"
+#include "IResource.h"
 #include "IResourceManager.h"
 #include <memory>
 #include <string>
@@ -39,8 +39,7 @@ namespace OpenGl
 			return nullptr;
 		};
 
-		void loadBasicResources()override;
-		void loadBasicScene(EntityManager* em, PlayerGO** player, CameraG0** camGO)override;
+		void loadResources()override;
 
 		void Delete(const std::string& p_fileName);
 		void DeleteAll()override;
