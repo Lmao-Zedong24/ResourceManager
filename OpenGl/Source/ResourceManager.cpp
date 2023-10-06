@@ -22,7 +22,7 @@ namespace OpenGl
 			rm.Add<Model>(std::string("Sting-Sword-lowpoly - Copy (") + std::to_string(i) + std::string(").obj"));
 
 		for (auto& resource : m_resources)
-			resource.second.get()->ThreadUnsafeSetup();
+			resource.second.get()->OpenGlSetup();
 	}
 
 	void ResourceManager::loadBasicScene(EntityManager* entityManager, PlayerGO** player, CameraG0** camGO)

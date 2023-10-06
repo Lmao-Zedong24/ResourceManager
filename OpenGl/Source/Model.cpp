@@ -6,6 +6,7 @@
 #include <string>
 #include "VBO.h"
 #include "EBO.h"
+#include <functional>
 
 Model::Model() : Transform(LibMath::Matrix4(1))
 {
@@ -21,7 +22,7 @@ void Model::Initialize(const std::string& fileName)
 	SetModel(fileName);
 }
 
-void Model::ThreadUnsafeSetup()
+void Model::OpenGlSetup()
 {
 	SetVAO();
 }
@@ -35,25 +36,22 @@ void Model::InterpretFace(	std::istringstream& p_line,
 	int v, t, n; //posIndex, uvIndex, normalIndex
 	std::string strVertex;
 	std::vector<int> triangleIndex;
-	triangleIndex.reserve(4);
+	triangleIndex.reserve(3); //min 3
 
 	while (p_line >> strVertex) //for each vertex in p_line
 	{
 		std::replace(strVertex.begin(), strVertex.end(), '/', ' ');
 
-		std::istringstream issVertex(strVertex);
+		std::istringstream issVertex(std::move(strVertex));
 		issVertex >> v; issVertex >> t; issVertex >> n; //posIndex, uvIndex, normalIndex
 
 		int vertexIndex = -1;
-		Vertex vert{	allPos[v - static_cast<int>(offset.m_x)],
-						allNor[n - static_cast<int>(offset.m_y)],
-						allUv[ t - static_cast<int>(offset.m_z)] };
 
 		for (int i = 0; i < m_vertices.size(); i++) //check if in array already
 		{
-			if ((m_vertices[i].m_pos == allPos[v - static_cast<int>(offset.m_x)]) &&
-				(m_vertices[i].m_nor == allNor[n - static_cast<int>(offset.m_y)]) &&
-				(m_vertices[i].m_pos == allUv[ t - static_cast<int>(offset.m_z)]))
+			if ((m_vertices[i].m_pos == allPos[v + static_cast<size_t>(offset.m_x)]) &&
+				(m_vertices[i].m_nor == allNor[n + static_cast<size_t>(offset.m_y)]) &&
+				(m_vertices[i].m_pos == allUv[ t + static_cast<size_t>(offset.m_z)]))
 			{
 				vertexIndex = i;
 				break;
@@ -62,81 +60,60 @@ void Model::InterpretFace(	std::istringstream& p_line,
 
 		if (vertexIndex == -1) //if not in array add
 		{
-			m_vertices.push_back(vert);
+			m_vertices.push_back({	allPos[v + static_cast<size_t>(offset.m_x)],
+									allNor[n + static_cast<size_t>(offset.m_y)],
+									allUv[ t + static_cast<size_t>(offset.m_z)]});
 			vertexIndex = static_cast<int>(m_vertices.size() - 1);
 		}
 
 		triangleIndex.push_back(vertexIndex); //add triangleIndex
+		strVertex = "";
 	}
 
-	if (triangleIndex.size() >= 3) //123
+	for (int i = 2; i < triangleIndex.size(); i++)
 	{
-		this->m_indices.push_back(triangleIndex[0]);
-		this->m_indices.push_back(triangleIndex[1]);
-		this->m_indices.push_back(triangleIndex[2]);
-	}
-	if(triangleIndex.size() >= 4) //123 and 134
-	{
-		this->m_indices.push_back(triangleIndex[0]);
-		this->m_indices.push_back(triangleIndex[2]);
-		this->m_indices.push_back(triangleIndex[3]);
+		this->m_indices.emplace_back(triangleIndex[0]);
+		this->m_indices.push_back(triangleIndex[(size_t)i - 1]);
+		this->m_indices.push_back(triangleIndex[i]);
 	}
 }
 
 bool Model::SetModel(const std::string& p_fileName)
 {
-	const float SCALE = 0.5f; // TODO : remove scale in SetModel
-
 	std::ifstream file;
 	file.open(ModelPath + p_fileName);
 
 	if (!file.is_open())
 		return false;
 
-	std::string line;
-	std::string charac; //charac at start of line
+	std::string line, charac; //charac at start of line
 	float f1, f2, f3;
-	LibMath::Vector3 offset(1.0f); // pos/uv/norIndex offset for stack space
+	LibMath::Vector3 indexObjOffset(-1.0f); // pos/uv/norIndex indexObjOffset for stack space
 
-	std::vector<LibMath::Vector3> allPos;
-	std::vector<LibMath::Vector3> allNor;
+	std::vector<LibMath::Vector3> allPos, allNor;
 	std::vector<LibMath::Vector2> allUv;
 
 	while (std::getline(file, line))
 	{
-		std::istringstream issLine(line);
+		std::istringstream issLine{ std::move(line) };
 		issLine >> charac;
 
-		//if (charac == "o")
-		//{
-		//	offset += LibMath::Vector3(	static_cast<float>(allPos.size() - 1),
-		//								static_cast<float>(allNor.size() - 1), 
-		//								static_cast<float>(allUv.size()) - 1);	//increment offset
-		//	allPos.clear(); 														// reset arrays
-		//	allNor.clear();
-		//	allUv.clear();
-		//}
+		if (charac == "f")
+		{
+			InterpretFace(issLine, allPos, allNor, allUv, indexObjOffset);
+			continue;
+		}
+
+		issLine >> f1; issLine >> f2; issLine >> f3;
 		if (charac == "v")
-		{
-			issLine >> f1; issLine >> f2; issLine >> f3;
 			allPos.push_back(LibMath::Vector3(f1 * SCALE, f2 * SCALE, f3 * SCALE));
-		}
 		else if (charac == "vt")
-		{
-			issLine >> f1; issLine >> f2;
 			allUv.push_back(LibMath::Vector2(f1, f2));
-		}
 		else if (charac == "vn")
-		{
-			issLine >> f1; issLine >> f2; issLine >> f3;
 			allNor.push_back(LibMath::Vector3(f1, f2, f3));
-		}
-		else if (charac == "f")
-		{
-			InterpretFace(issLine, allPos, allNor, allUv, offset);
-		}
 	}
 
+	file.close();
 	return true;
 }
 

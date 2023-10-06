@@ -1,49 +1,46 @@
 #pragma once
 #include "IResource.h"
 #include "ITransformable.h"
-#include "Camera.h"
-#include <glad.h>
-#include "Vector.h"
-#include "VAO.h"
-#include "Texture.h"
-#include "Shader.h"
+#include "Model.h"
 #include <string>
 #include <vector>
+#include <map>
 
 namespace Multi
 {
-	class Model : public IResource, public Transform
+	class ModelMulti : public Model
 	{
-		struct Vertex;
-
-	public:
-		Model();
-		~Model();
-
-		void Initialize(const std::string& p_fileName) override;
-		void Draw(Texture& textures, Shader& shader, Camera& p_camera);
-
-		void Delete()override;
-		void SetVAO();
+	public: 
+		void setThreadPollId(int id);
+		void Initialize(const std::string& fileName)override;
 
 	private:
-		std::vector<Vertex> m_vertices;
-		std::vector<GLuint> m_indices;
-		VAO					m_vao;
-
-		const std::string ModelPath = "../assets/meshes/";
-
-		void InterpretFace(std::istringstream&	line,
-			const std::vector<LibMath::Vector3>& allPos,
-			const std::vector<LibMath::Vector3>& allNor,
-			const std::vector<LibMath::Vector2>& allUv,
-			const LibMath::Vector3& offset);
-
-		struct Vertex
+		struct VertexThreadInfo
 		{
-			LibMath::Vector3 m_pos;
-			LibMath::Vector3 m_nor;
-			LibMath::Vector2 m_uv;
+			bool											isReading = false;
+			int												size = 0;
+			int												finished = 0;
+			std::map<int, std::vector<LibMath::Vector3>>	allPos, 
+															allNor;
+			std::map<int, std::vector<LibMath::Vector2>>	allUv;
+			std::vector<std::istringstream>					faces;
+
+			bool isFinished() 
+			{ 
+				return !isReading && size == finished; 
+			};
 		};
+
+		void fileReader(const std::string& fileName);
+		void startInterpret(std::string&& subFile, std::shared_ptr<VertexThreadInfo> vertInfo, int index);
+		void stringInterpreter(std::shared_ptr<std::string> subString, std::shared_ptr<VertexThreadInfo> ptr, int index);
+		void assembleFacesVerteciesIndicies(std::shared_ptr<VertexThreadInfo> vertInfo);
+		template<typename T>
+		void moveVector2dto1d(std::map<int, std::vector<T>>& from, std::vector<T>& to);
+
+		const int	MAX_SUBFILE_STRING_LEN = 10000;
+		int			m_pollId = 0;
+		std::mutex	mutex;
+
 	};
 }

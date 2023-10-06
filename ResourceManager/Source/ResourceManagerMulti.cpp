@@ -6,6 +6,7 @@
 #include "ThreadPool.h"
 #include "EntityManager.h"
 #include "Texture.h"
+#include "ModelMulti.h"
 #include <future>
 
 namespace Multi
@@ -38,20 +39,20 @@ namespace Multi
 		rm.addRessource<Texture>("white.png");
 		rm.addRessource<Texture>("grey.png");
 		rm.addRessource<Texture>("black.png");
-		rm.addRessource<Model>("Sting-Sword-lowpoly.obj");
-		rm.addRessource<Model>("cube.obj");
-		rm.addRessource<Model>("sphere.obj");
-		rm.addRessource<Model>("cylindre.obj");
+		rm.addRessource<ModelMulti>("cube.obj");
+		rm.addRessource<ModelMulti>("Sting-Sword-lowpoly.obj");
+		rm.addRessource<ModelMulti>("sphere.obj");
+		rm.addRessource<ModelMulti>("cylindre.obj");
 
 		for (int i = 2; i <= 10; i++) //Sting-Sword-lowpoly - Copy (2).obj
-			rm.addRessource<Model>(std::string("Sting-Sword-lowpoly - Copy (") + std::to_string(i) + std::string(").obj"));
+			rm.addRessource<ModelMulti>(std::string("Sting-Sword-lowpoly - Copy (") + std::to_string(i) + std::string(").obj"));
 
 		ThreadPoll::getInstance()->waitUntilTasksAreDone(m_poolId);
 		ThreadPoll::getInstance()->stop();
 
 		//unsafe functions
 		for (auto& resource : m_resources)
-			resource.second.get()->ThreadUnsafeSetup();
+			resource.second.get()->OpenGlSetup();
 	}
 
 	void ResourceManager::loadBasicScene(EntityManager* entityManager, PlayerGO** player, CameraG0** camGO)
@@ -117,7 +118,9 @@ namespace Multi
 		m_resources.emplace(fileName, std::make_unique<T>());
 		auto resource = m_resources[fileName].get();
 
-		//auto llamda = [] {}
+		if (std::is_same_v<ModelMulti, T>) //TODO : futures
+			dynamic_cast<ModelMulti*>(resource)->setThreadPollId(m_poolId);
+
 		std::function<void()> func = std::bind(&IResource::Initialize, resource, fileName);
 		Multi::ThreadPoll::getInstance()->addFuncToThread(func, m_poolId);
 	};

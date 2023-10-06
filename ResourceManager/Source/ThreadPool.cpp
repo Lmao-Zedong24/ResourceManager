@@ -20,28 +20,26 @@ namespace Multi
         return m_instance.get();
     }
 
-    void ThreadPoll::startWorkers(int i)
+    void ThreadPoll::startRunningWorkers(int num)
     {
-        stop();
-
         {
             std::unique_lock lk(m_task);
-            m_workers.resize(std::clamp(i, 0, m_maxPoolSize));
 
-            for (int i = 0; i < m_workers.size(); i++)
+            m_workers.resize(std::clamp(num, (int)m_workers.size(), m_maxPoolSize));
+
+            for (int i = m_numRunningWorkers; i < m_workers.size(); i++)
                 m_workers[i] = std::jthread(&ThreadPoll::workerThread, this);
 
             m_isStop = false;
         }
-
     }
 
     void ThreadPoll::setMaxPollSize()
     {
-        startWorkers(m_maxPoolSize);
+        startRunningWorkers(m_maxPoolSize);
     }
 
-    void ThreadPoll::addFuncToThread(const std::function<void()>& func, int id = -1)
+    void ThreadPoll::addFuncToThread(const std::function<void()>& func, int id)
     {
         if (m_workers.empty())
             m_workers.push_back(std::jthread(&ThreadPoll::workerThread, this));
@@ -96,13 +94,15 @@ namespace Multi
 
     void ThreadPoll::workerThread()
     {
+        static auto wait = [this] { return !m_funcsToThread.empty() || m_isStop; };
         while (true)
         {   
             std::function<void()> func;
 
             {
                 std::unique_lock lk(m_task);
-                m_condition.wait(lk, [this] { return !m_funcsToThread.empty() || m_isStop; });
+                while (!(!m_funcsToThread.empty() || m_isStop))
+                    m_condition.wait(lk, wait);
 
                 if (m_isStop)
                     return;
@@ -111,8 +111,8 @@ namespace Multi
                 func = m_funcsToThread.front();
                 m_funcsToThread.pop();
             }
-            func();
 
+            func();
 
             {
                 std::unique_lock lk(m_task);

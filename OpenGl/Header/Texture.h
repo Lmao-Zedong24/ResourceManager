@@ -11,7 +11,7 @@ public:
 	~Texture();
 
 	void Initialize(const std::string& p_fileName) override;
-	void ThreadUnsafeSetup() override;
+	void OpenGlSetup()override;
 
 	void Bind();
 	void Unbind();

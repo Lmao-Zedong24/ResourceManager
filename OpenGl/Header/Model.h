@@ -18,15 +18,17 @@ public:
 	Model();
 	~Model();
 
-	void Initialize(const std::string& fileName)override;
-	void ThreadUnsafeSetup()override;
+	void virtual Initialize(const std::string& fileName)override;
+	void OpenGlSetup()override;
 	void SetVAO();
 
 	void Draw(Texture& textures, Shader& shader, Camera& p_camera);
 
 	void Delete()override;
 
-private:
+	const float SCALE = 0.5f; // TODO : remove scale in SetModel
+
+protected:
 	bool SetModel(const std::string& p_fileName);
 
 	std::vector<Vertex> m_vertices;

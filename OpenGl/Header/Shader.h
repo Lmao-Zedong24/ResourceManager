@@ -25,7 +25,7 @@ private:
 	GLuint m_vertexId = 0;
 	GLuint m_fragId = 0;
 
-	const std::string ShaderPath = "Shaders/";
+	const std::string ShaderPath = "../Shaders/";
 
 	static bool checkValidShader(GLint p_id);
 };

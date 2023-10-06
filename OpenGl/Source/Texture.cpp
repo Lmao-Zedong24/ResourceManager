@@ -16,7 +16,7 @@ void Texture::Initialize(const std::string& p_fileName)
     m_fileName = p_fileName;
 }
 
-void Texture::ThreadUnsafeSetup()
+void Texture::OpenGlSetup()
 {
     SetTexture(m_fileName);
 }
@@ -34,7 +34,6 @@ bool Texture::SetTexture(const std::string& p_fileName)
 
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true);
-
     unsigned char* data = stbi_load((TexturePath + p_fileName).c_str(), &width, &height, &nrChannels, 0);
 
     if (data)

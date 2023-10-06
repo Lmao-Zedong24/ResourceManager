@@ -22,7 +22,7 @@ void Shader::Initialize(const std::string& p_fileBuffer)
 
 bool Shader::SetVertexShader(const std::string& p_filename)
 {
-	std::string tmp = ReadFile(p_filename, ShaderPath);
+	std::string tmp = FileToString(p_filename, ShaderPath);
 
 	if (tmp.empty())
 		return false;
@@ -38,7 +38,7 @@ bool Shader::SetVertexShader(const std::string& p_filename)
 
 bool Shader::SetFragmentShader(const std::string& p_filename)
 {
-	std::string str = ReadFile(p_filename, ShaderPath);
+	std::string str = FileToString(p_filename, ShaderPath);
 
 	if (str.empty())
 		return false;

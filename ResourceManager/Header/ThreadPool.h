@@ -15,10 +15,10 @@ namespace Multi
     public:
         static ThreadPoll* getInstance();
 
-        void            startWorkers(int i);
-        void            setMaxPollSize();
-        void            addFuncToThread(const std::function<void()>& func, int id);
+        void            startRunningWorkers(int num);
         void            stop();
+        void            setMaxPollSize();
+        void            addFuncToThread(const std::function<void()>& func, int id = -1);
 
         int             getPoolId();
         void            waitUntilTasksAreDone(int id);

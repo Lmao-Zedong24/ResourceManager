@@ -1,157 +1,160 @@
 #include "ModelMulti.h"
-#include "Camera.h"
-#include "Vector.h"
-#include <fstream>
+#include "ThreadPool.h"
+#include <functional>
 #include <sstream>
-#include <string>
-#include "VBO.h"
-#include "EBO.h"
+
+#include <concurrent_unordered_set.h>
+
+
 
 namespace Multi 
 {
-	Model::Model() : Transform(LibMath::Matrix4(1))
-	{}
-
-	Model::~Model()
+	void ModelMulti::setThreadPollId(int id)
 	{
-		m_vao.Delete();
+		m_pollId = id;
 	}
 
-	void Model::InterpretFace(std::istringstream& p_line,
-		const std::vector<LibMath::Vector3>& allPos,
-		const std::vector<LibMath::Vector3>& allNor,
-		const std::vector<LibMath::Vector2>& allUv,
-		const LibMath::Vector3& offset)
+	void ModelMulti::Initialize(const std::string& fileName)
 	{
-		int v, t, n; //posIndex, uvIndex, normalIndex
-		std::string strVertex;
-		std::vector<int> triangleIndex;
-		triangleIndex.reserve(4);
-
-		while (p_line >> strVertex) //for each vertex in p_line
-		{
-			std::replace(strVertex.begin(), strVertex.end(), '/', ' ');
-			std::istringstream issVertex(strVertex);
-			issVertex >> v; issVertex >> t; issVertex >> n; //posIndex, uvIndex, normalIndex
-
-			int vertexIndex = -1;
-			Vertex vert{	allPos[v - static_cast<int>(offset.m_x)],
-							allNor[n - static_cast<int>(offset.m_y)],
-							allUv[t - static_cast<int>(offset.m_z)] };
-
-			for (int i = 0; i < m_vertices.size(); i++) //check if in array already
-			{
-				if ((m_vertices[i].m_pos == allPos[v - static_cast<int>(offset.m_x)]) &&
-					(m_vertices[i].m_nor == allNor[n - static_cast<int>(offset.m_y)]) &&
-					(m_vertices[i].m_pos == allUv[t - static_cast<int>(offset.m_z)]))
-				{
-					vertexIndex = i;
-					break;
-				}
-			}
-
-			if (vertexIndex == -1) //if not in array add
-			{
-				m_vertices.push_back(vert);
-				vertexIndex = static_cast<int>(m_vertices.size() - 1);
-			}
-
-			triangleIndex.push_back(vertexIndex); //add triangleIndex
-		}
-
-		if (triangleIndex.size() >= 3) //123
-		{
-			this->m_indices.push_back(triangleIndex[0]);
-			this->m_indices.push_back(triangleIndex[1]);
-			this->m_indices.push_back(triangleIndex[2]);
-		}
-		if (triangleIndex.size() >= 4) //123 and 134
-		{
-			this->m_indices.push_back(triangleIndex[0]);
-			this->m_indices.push_back(triangleIndex[2]);
-			this->m_indices.push_back(triangleIndex[3]);
-		}
+		std::function<void()> func = std::bind(&Multi::ModelMulti::fileReader, this, fileName);
+		ThreadPoll::getInstance()->addFuncToThread(func, m_pollId);
 	}
 
-	void Model::Initialize(const std::string& p_fileName)
+	void ModelMulti::fileReader(const std::string& fileName)
 	{
-		const float SCALE = 0.5f; // TODO : remove scale in SetModel
-
 		std::ifstream file;
-		file.open(ModelPath + p_fileName);
+		file.open (ModelPath + fileName);
 
-		if (!file.is_open())
-			return;
+		if (!file.is_open()) { return; }
 
-		std::string line;
-		std::string charac; //charac at start of line
-		float f1, f2, f3;
-		LibMath::Vector3 offset(1.0f); // pos/uv/norIndex offset for stack space
+		thread_local std::string line, subFile; //charac at start of line
+		std::shared_ptr<VertexThreadInfo> vertInfo = std::make_shared<VertexThreadInfo>();
 
-		std::vector<LibMath::Vector3> allPos;
-		std::vector<LibMath::Vector3> allNor;
-		std::vector<LibMath::Vector2> allUv;
+		vertInfo->isReading = true;
+		vertInfo->size = 0;
+		subFile.reserve(MAX_SUBFILE_STRING_LEN);
 
-		while (std::getline(file, line))
+		int indexSplit = 0;
+		int i = 0;
+		while(std::getline(file, line))
 		{
-			std::istringstream issLine(line);
+			if (subFile.size() + line.size() > MAX_SUBFILE_STRING_LEN)
+				startInterpret(std::move(subFile), vertInfo, indexSplit++);
+
+			subFile += line;
+			subFile += '\n';
+			i++;
+		}
+
+		if (!subFile.empty())
+			startInterpret(std::move(subFile), vertInfo, indexSplit++);
+
+		{
+			std::unique_lock lk(mutex);
+			vertInfo->size = indexSplit;
+			vertInfo->isReading = false;
+		}
+
+		file.close();
+	}
+
+	void ModelMulti::startInterpret(std::string&& subFile, std::shared_ptr<VertexThreadInfo> ptr, int index)
+	{
+		auto vertInfo = std::atomic_load(&ptr);
+
+		std::function<void()> func = std::bind(&Multi::ModelMulti::stringInterpreter, this, std::make_shared<std::string>(subFile), vertInfo, index);
+		Multi::ThreadPoll::getInstance()->addFuncToThread(func, m_pollId); //with subFile
+		subFile = "";
+	}
+
+	void ModelMulti::stringInterpreter(std::shared_ptr<std::string> subString, std::shared_ptr<VertexThreadInfo> ptr, int index)
+	{
+		auto vertInfo = std::atomic_load(&ptr);
+
+		if (subString.get()->empty() || (!vertInfo->isReading && index >= vertInfo->size))
+			int i = 0;
+
+		std::istringstream stream{ std::move(*subString.get()) };
+		std::string		line, charac; //charac at start of line
+		float				f1, f2, f3;
+
+		while (std::getline(stream, line))
+		{
+			std::istringstream issLine{std::move(line)};
 			issLine >> charac;
 
-			if (charac == "v")
 			{
+				std::unique_lock lk(mutex);
+
+				if (charac == "f")
+				{
+					vertInfo->faces.emplace_back(std::move(issLine));
+					continue;
+				}
 				issLine >> f1; issLine >> f2; issLine >> f3;
-				allPos.push_back(LibMath::Vector3(f1 * SCALE, f2 * SCALE, f3 * SCALE));
+
+				if (charac == "v")
+					vertInfo->allPos.insert({index, std::vector<LibMath::Vector3>()}).first->second.push_back(LibMath::Vector3(f1 * SCALE, f2 * SCALE, f3 * SCALE));
+				else if (charac == "vt")
+					vertInfo->allUv.insert({index, std::vector<LibMath::Vector2>()}).first->second.push_back(LibMath::Vector2(f1, f2));
+				else if (charac == "vn")
+					vertInfo->allNor.insert({index, std::vector<LibMath::Vector3>()}).first->second.push_back(LibMath::Vector3(f1, f2, f3));
 			}
-			else if (charac == "vt")
-			{
-				issLine >> f1; issLine >> f2;
-				allUv.push_back(LibMath::Vector2(f1, f2));
-			}
-			else if (charac == "vn")
-			{
-				issLine >> f1; issLine >> f2; issLine >> f3;
-				allNor.push_back(LibMath::Vector3(f1, f2, f3));
-			}
-			else if (charac == "f")
-			{
-				InterpretFace(issLine, allPos, allNor, allUv, offset);
-			}
+
+			charac = "";
 		}
 
-		SetVAO();
+		bool callEndFunc = false;
+		{
+			std::unique_lock lk(mutex);
+			vertInfo->finished++;
+
+			callEndFunc = vertInfo->isFinished();
+		}
+
+		if (callEndFunc)
+			assembleFacesVerteciesIndicies(vertInfo);
 	}
 
-	void Model::SetVAO()
+	void ModelMulti::assembleFacesVerteciesIndicies(std::shared_ptr<VertexThreadInfo> ptr)
 	{
-		m_vao.Bind();
+		static LibMath::Vector3 indexObjOffset(-1.0f); // pos/uv/norIndex index .Obj file offset for stack space
+		
+		auto vertInfo = std::atomic_load(&ptr);
 
-		VBO vbo((GLfloat*)(&m_vertices[0]), m_vertices.size() * sizeof(Vertex));
-		EBO ebo((GLuint*)(&m_indices[0]), m_indices.size() * sizeof(GLuint));
+		std::vector<LibMath::Vector3> poss;
+		std::vector<LibMath::Vector3> nors;
+		std::vector<LibMath::Vector2> uvs;
 
-		m_vao.LinkVBO(vbo, 0, 3, sizeof(Vertex), (void*)0);
-		m_vao.LinkVBO(vbo, 1, 3, sizeof(Vertex), (void*)(3 * sizeof(float)));
-		m_vao.LinkVBO(vbo, 2, 2, sizeof(Vertex), (void*)(6 * sizeof(float)));
+		{	//should be only popinter with access bcs called when finished
+			std::unique_lock lk(mutex);
+			moveVector2dto1d(vertInfo->allPos, poss);
+			moveVector2dto1d(vertInfo->allNor, nors);
+			moveVector2dto1d(vertInfo->allUv,  uvs);
 
-		m_vao.Unbind();
-		vbo.Unbind();
-		ebo.Unbind();
+
+			for (auto& line : vertInfo->faces)
+				InterpretFace(line, poss, nors, uvs, indexObjOffset);
+		}
+
+		//TODO : Model* set promise here
 	}
 
-	void Model::Delete()
+	template<typename T>
+	void ModelMulti::moveVector2dto1d(std::map<int, std::vector<T>>& from, std::vector<T>& to)
 	{
-		m_vao.Delete();
+		int totalsize = 0;
+		for (int i = 0; i < from.size(); i++)
+			totalsize += from[i].size();
+
+		to.reserve(totalsize);
+		for (int i = 0; i < from.size(); i++)
+		{
+			for (int j = 0; j < from[i].size(); j++)
+				to.emplace_back(std::move(from[i][j]));
+		}
 	}
 
-	void Model::Draw(Texture& p_texture, Shader& p_shader, Camera& p_camera)
-	{
-		p_shader.Activate();
-		m_vao.Bind();
-		p_texture.Bind();
-
-
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(m_indices.size()), GL_UNSIGNED_INT, 0);
-		m_vao.Unbind();
-	}
 }
 
 
