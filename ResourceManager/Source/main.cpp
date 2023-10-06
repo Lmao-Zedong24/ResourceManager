@@ -8,6 +8,7 @@
 #include "CameraG0.h"
 #include "Light.h"
 #include "Timer.h"
+#include "ThreadPool.h"
 
 
 constexpr auto WINDOW_WIDTH = 800;
@@ -65,6 +66,7 @@ int main()
 			stopWatch.Start();
 			rm.loadRessources();
 			std::cout << "Resources loaded in: " << stopWatch.Stop() << "ms" << std::endl;
+			Multi::ThreadPoll::getInstance()->stop();
 		}
 		else if (c == 'q')
 		{

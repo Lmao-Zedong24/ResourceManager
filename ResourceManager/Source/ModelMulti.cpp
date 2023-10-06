@@ -9,15 +9,10 @@
 
 namespace Multi 
 {
-	void ModelMulti::setThreadPollId(int id)
-	{
-		m_pollId = id;
-	}
-
 	void ModelMulti::Initialize(const std::string& fileName)
 	{
 		std::function<void()> func = std::bind(&Multi::ModelMulti::fileReader, this, fileName);
-		ThreadPoll::getInstance()->addFuncToThread(func, m_pollId);
+		ThreadPoll::getInstance()->addFuncToThread(func);
 	}
 
 	void ModelMulti::fileReader(const std::string& fileName)
@@ -35,7 +30,6 @@ namespace Multi
 		subFile.reserve(MAX_SUBFILE_STRING_LEN);
 
 		int indexSplit = 0;
-		int i = 0;
 		while(std::getline(file, line))
 		{
 			if (subFile.size() + line.size() > MAX_SUBFILE_STRING_LEN)
@@ -43,7 +37,6 @@ namespace Multi
 
 			subFile += line;
 			subFile += '\n';
-			i++;
 		}
 
 		if (!subFile.empty())
@@ -63,19 +56,14 @@ namespace Multi
 		auto vertInfo = std::atomic_load(&ptr);
 
 		std::function<void()> func = std::bind(&Multi::ModelMulti::stringInterpreter, this, std::make_shared<std::string>(subFile), vertInfo, index);
-		Multi::ThreadPoll::getInstance()->addFuncToThread(func, m_pollId); //with subFile
+		Multi::ThreadPoll::getInstance()->addFuncToThread(func); //with subFile
 		subFile = "";
 	}
 
-	void ModelMulti::stringInterpreter(std::shared_ptr<std::string> subString, std::shared_ptr<VertexThreadInfo> ptr, int index)
+	void ModelMulti::stringInterpreter(std::shared_ptr<std::string> subString, std::shared_ptr<VertexThreadInfo> vertInfo, int index)
 	{
-		auto vertInfo = std::atomic_load(&ptr);
-
-		if (subString.get()->empty() || (!vertInfo->isReading && index >= vertInfo->size))
-			int i = 0;
-
-		std::istringstream stream{ std::move(*subString.get()) };
-		std::string		line, charac; //charac at start of line
+		std::istringstream	stream{ std::move(*subString.get()) };
+		std::string			line, charac; //charac at start of line
 		float				f1, f2, f3;
 
 		while (std::getline(stream, line))
@@ -102,6 +90,7 @@ namespace Multi
 			}
 
 			charac = "";
+			line = "";
 		}
 
 		bool callEndFunc = false;
@@ -116,12 +105,10 @@ namespace Multi
 			assembleFacesVerteciesIndicies(vertInfo);
 	}
 
-	void ModelMulti::assembleFacesVerteciesIndicies(std::shared_ptr<VertexThreadInfo> ptr)
+	void ModelMulti::assembleFacesVerteciesIndicies(std::shared_ptr<VertexThreadInfo> vertInfo)
 	{
 		static LibMath::Vector3 indexObjOffset(-1.0f); // pos/uv/norIndex index .Obj file offset for stack space
 		
-		auto vertInfo = std::atomic_load(&ptr);
-
 		std::vector<LibMath::Vector3> poss;
 		std::vector<LibMath::Vector3> nors;
 		std::vector<LibMath::Vector2> uvs;
@@ -137,7 +124,7 @@ namespace Multi
 				InterpretFace(line, poss, nors, uvs, indexObjOffset);
 		}
 
-		//TODO : Model* set promise here
+		m_promise.set_value(dynamic_cast<IResource*>(this));
 	}
 
 	template<typename T>

@@ -4,7 +4,8 @@
 #include <functional>
 #include <queue>
 #include <mutex>
-#include <set>
+#include <unordered_set>
+#include <future>
 
 namespace Multi
 {
@@ -18,10 +19,7 @@ namespace Multi
         void            startRunningWorkers(int num);
         void            stop();
         void            setMaxPollSize();
-        void            addFuncToThread(const std::function<void()>& func, int id = -1);
-
-        int             getPoolId();
-        void            waitUntilTasksAreDone(int id);
+        void            addFuncToThread(const std::function<void()>& func);
 
         ThreadPoll();
         ~ThreadPoll() = default;
@@ -34,14 +32,9 @@ namespace Multi
         int                                 m_maxPoolSize;
         bool                                m_isStop;
         int                                 m_numRunningWorkers;
-        std::mutex                          m_task;
-        std::mutex                          m_id;
+        std::mutex                          m_task, m_promise;
         std::condition_variable             m_condition;
         std::queue<std::function<void()>>   m_funcsToThread;
-        std::vector<int>                    m_idNumTaskBuffer;
-        //std::queue<std::function<void()>>   m_funcsToThread;
         std::vector<std::jthread>           m_workers;
-
     };
-
 }

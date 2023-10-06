@@ -7,6 +7,7 @@
 #include "EntityManager.h"
 #include "Texture.h"
 #include "ModelMulti.h"
+#include "ThreadableResource.h"
 #include <future>
 
 namespace Multi
@@ -22,37 +23,33 @@ namespace Multi
 		this->m_resources.erase(m_resources.begin(), m_resources.end());
 	}
 
-	ResourceManager::ResourceManager()
-	{
-		auto tp = ThreadPoll::getInstance();
-		m_poolId = tp->getPoolId();
-	}
-
 	void ResourceManager::loadBasicResources()
 	{
 		auto& rm = *this;
 
-		rm.addRessource<Texture>("png-clipart-barack-obama-barack-obama.png");
-		rm.addRessource<Texture>("red.png");
-		rm.addRessource<Texture>("green.png");
-		rm.addRessource<Texture>("blue.png");
-		rm.addRessource<Texture>("white.png");
-		rm.addRessource<Texture>("grey.png");
-		rm.addRessource<Texture>("black.png");
-		rm.addRessource<ModelMulti>("cube.obj");
-		rm.addRessource<ModelMulti>("Sting-Sword-lowpoly.obj");
-		rm.addRessource<ModelMulti>("sphere.obj");
-		rm.addRessource<ModelMulti>("cylindre.obj");
+		std::vector<std::future<IResource*>> futures;
+
+		futures.emplace_back(rm.addRessource<Texture>("png-clipart-barack-obama-barack-obama.png"));
+		futures.emplace_back(rm.addRessource<Texture>("red.png"));
+		futures.emplace_back(rm.addRessource<Texture>("green.png"));
+		futures.emplace_back(rm.addRessource<Texture>("blue.png"));
+		futures.emplace_back(rm.addRessource<Texture>("white.png"));
+		futures.emplace_back(rm.addRessource<Texture>("grey.png"));
+		futures.emplace_back(rm.addRessource<Texture>("black.png"));
+		futures.emplace_back(rm.addRessource<ModelMulti>("cube.obj"));
+		futures.emplace_back(rm.addRessource<ModelMulti>("Sting-Sword-lowpoly.obj"));
+		futures.emplace_back(rm.addRessource<ModelMulti>("sphere.obj"));
+		futures.emplace_back(rm.addRessource<ModelMulti>("cylindre.obj"));
 
 		for (int i = 2; i <= 10; i++) //Sting-Sword-lowpoly - Copy (2).obj
-			rm.addRessource<ModelMulti>(std::string("Sting-Sword-lowpoly - Copy (") + std::to_string(i) + std::string(").obj"));
+			futures.emplace_back(	rm.addRessource<ModelMulti>(
+									std::string(	"Sting-Sword-lowpoly - Copy (") + 
+													std::to_string(i) + 
+													std::string(").obj")));
 
-		ThreadPoll::getInstance()->waitUntilTasksAreDone(m_poolId);
-		ThreadPoll::getInstance()->stop();
-
-		//unsafe functions
-		for (auto& resource : m_resources)
-			resource.second.get()->OpenGlSetup();
+		//thread unsafe functions
+		for (auto& future : futures)
+			future.get()->OpenGlSetup();
 	}
 
 	void ResourceManager::loadBasicScene(EntityManager* entityManager, PlayerGO** player, CameraG0** camGO)
@@ -107,10 +104,10 @@ namespace Multi
 	}
 
 	template<typename T>
-	void ResourceManager::addRessource(const std::string& fileName)
+	std::future<IResource*> ResourceManager::addRessource(const std::string& fileName)
 	{
 		if (!(std::is_same_v<IResource, T> || std::is_base_of_v<IResource, T>))
-			return;
+			throw "Template not an IResource\n";
 
 		if (this->m_resources.count(fileName) != 0)
 			this->m_resources.erase(fileName);
@@ -118,11 +115,19 @@ namespace Multi
 		m_resources.emplace(fileName, std::make_unique<T>());
 		auto resource = m_resources[fileName].get();
 
-		if (std::is_same_v<ModelMulti, T>) //TODO : futures
-			dynamic_cast<ModelMulti*>(resource)->setThreadPollId(m_poolId);
+		std::promise<IResource*>	promise;
+		auto						future = promise.get_future();
 
+		//if (static_assert(std::is_base_of_v<ThreadableResource, T>)) //break compiler if false
+		if constexpr (std::is_base_of_v<ThreadableResource, T>)
+			dynamic_cast<T*>(resource)->movePromise(std::move(promise));
+		else
+			promise.set_value(resource); 
+			
 		std::function<void()> func = std::bind(&IResource::Initialize, resource, fileName);
-		Multi::ThreadPoll::getInstance()->addFuncToThread(func, m_poolId);
+		Multi::ThreadPoll::getInstance()->addFuncToThread(func);
+
+		return std::move(future);
 	};
 
 	template<typename T>

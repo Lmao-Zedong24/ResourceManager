@@ -39,23 +39,14 @@ namespace Multi
         startRunningWorkers(m_maxPoolSize);
     }
 
-    void ThreadPoll::addFuncToThread(const std::function<void()>& func, int id)
+    void ThreadPoll::addFuncToThread(const std::function<void()>& func)
     {
         if (m_workers.empty())
             m_workers.push_back(std::jthread(&ThreadPoll::workerThread, this));
 
         {
             std::unique_lock lk(m_task);
-
-            if (id >= 0 && id < m_idNumTaskBuffer.size())
-            {
-                std::function<void()> newFunc([this, func, id] { func();  m_idNumTaskBuffer[id]--; });
-                m_funcsToThread.emplace(newFunc);
-                m_idNumTaskBuffer[id]++;
-            }
-            else
-                m_funcsToThread.emplace(func);
-
+            m_funcsToThread.emplace(func);
             m_condition.notify_one();
         }
     }
@@ -73,22 +64,6 @@ namespace Multi
         {
             std::unique_lock lk(m_task);
             areRunningThreads = m_numRunningWorkers != 0;
-        }
-    }
-
-    int ThreadPoll::getPoolId()
-    {
-        m_idNumTaskBuffer.push_back(0);
-        return m_idNumTaskBuffer.size() - 1;
-    }
-
-    void ThreadPoll::waitUntilTasksAreDone(int id)
-    {
-        bool areRunningTasks = true;
-        while (areRunningTasks)       //wait till they all done
-        {
-            std::unique_lock lk(m_id);
-            areRunningTasks = m_idNumTaskBuffer[id] != 0;
         }
     }
 

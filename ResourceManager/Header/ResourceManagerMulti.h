@@ -7,19 +7,20 @@
 #include <thread>
 #include <mutex>
 #include <queue>
+#include <future>
 
 namespace Multi
 {
 	class ResourceManager : public IResourceManager
 	{
 	public:
-		ResourceManager();
+		ResourceManager() = default;
 		ResourceManager(const ResourceManager&) = default;
 		ResourceManager(ResourceManager&&) = default;
 		~ResourceManager() = default;
 
 		template <typename T>
-		void addRessource(const std::string& p_fileName);
+		std::future<IResource*> addRessource(const std::string& p_fileName);
 
 		void loadBasicResources()override;
 		void loadBasicScene(EntityManager* em, PlayerGO** player, CameraG0** camGO)override;
@@ -33,7 +34,6 @@ namespace Multi
 	private:
 		std::unordered_map<std::string, std::unique_ptr<IResource>> m_resources;
 		std::vector<std::thread> m_threads;
-		int m_poolId;
 	};
 
 }
